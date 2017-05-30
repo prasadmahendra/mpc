@@ -79,16 +79,6 @@ int epsi_range_begin     = cte_range_begin   + N;
 int steering_range_begin = epsi_range_begin  + N;
 int throttle_range_begin = steering_range_begin + (N - 1);
 
-
-// Multipliers for the cost computation
-const double cost_state_cte    = 300.0;
-const double cost_state_epsi   = 50.0;
-const double cost_state_v      = 1.0;
-const double cost_val_steering = 200.0;
-const double cost_val_throttle = 50.0;
-const double cost_seq_steering = 5000.0;
-const double cost_seq_throttle = 100.0;
-
 class FG_eval {
  public:
   Eigen::VectorXd coeffs; // Fitted polynomial coefficients
@@ -126,14 +116,14 @@ class FG_eval {
     // Hence we will set our desired velocity to a speed that we expect our car to maintain throughout the track (Another option is to measure the euclidean distance
     // between the current position of the vehicle and the destination and adding that to the cost.)
     
-    double desired_velocity = 40;   // go speed racer, go!
+    double desired_velocity = 45;   // go speed racer, go!
     
     fg[0] = 0.0;
     for (int t = 0; t < N; t++)
     {
-      fg[0] += cost_state_cte * pow(vars[cte_range_begin + t]  - desired_cte,  2);
-      fg[0] += cost_state_epsi * pow(vars[epsi_range_begin + t] - desired_epsi, 2);
-      fg[0] += cost_state_v   * pow(vars[v_range_begin + t]    - desired_velocity, 2);
+      fg[0] += pow(vars[cte_range_begin + t]  - desired_cte,  2);
+      fg[0] += pow(vars[epsi_range_begin + t] - desired_epsi, 2);
+      fg[0] += pow(vars[v_range_begin + t] - desired_velocity, 2);
     }
     
     // The cost function is not limited to the state, we could also include the control input! The reason we would do this is to allow us to penalize the magnitude of
@@ -142,8 +132,8 @@ class FG_eval {
 
     for (int t = 0; t < N - 1; t++)
     {
-      fg[0] += cost_val_steering * pow(vars[steering_range_begin + t], 2);
-      fg[0] += cost_val_throttle * pow(vars[throttle_range_begin + t], 2);
+      fg[0] += pow(vars[steering_range_begin + t], 2);
+      fg[0] += pow(vars[throttle_range_begin + t], 2);
     }
     
     // We still need to capture the change-rate of the control input to add some temporal smoothness.
@@ -151,8 +141,8 @@ class FG_eval {
     
     for (int t = 0; t < N - 2; t++)
     {
-      fg[0] += cost_seq_steering * pow(vars[steering_range_begin + t], 2);
-      fg[0] += cost_seq_throttle * pow(vars[throttle_range_begin + t], 2);
+      fg[0] += 10 * pow(vars[steering_range_begin + t + 1] - vars[steering_range_begin + t], 2);
+      fg[0] += pow(vars[throttle_range_begin + t + 1] - vars[throttle_range_begin + t], 2);
     }
 
     // Initial constraints
@@ -212,21 +202,43 @@ class FG_eval {
   }
 };
 
+
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
-MPC::~MPC() {}
+MPC::MPC()
+{
+  cte = 0.0;
+  epsi = 0.0;
+}
+
+MPC::~MPC()
+{
+}
 
 // Solve the model given an initial state and polynomial coefficients.
 // Return the first actuatotions.
-vector<double> MPC::Solve(Eigen::VectorXd current_state) {
+vector<double> MPC::Solve(const Eigen::VectorXd& current_state) {
+  /*
   double px     = current_state[0];
   double py     = current_state[1];
   double ψ      = current_state[2];
   double v      = current_state[3];
   double δ      = current_state[4];
   double a      = current_state[5];
+  */
+  
+  double v      = current_state[3];
+  double δ      = current_state[4];
+  double a      = current_state[5];
+  
+  // adjust current state for actuator latency (100ms)
+  double actuator_latency = 0.1;
+  const double px = 0.0 + v * actuator_latency;
+  const double py = 0.0;
+  const double ψ = 0.0 + v * (-δ) / Lf * actuator_latency;
+  v = v + a * actuator_latency;
+  
   
   int state_size = 6;
   bool ok = true;
@@ -259,7 +271,7 @@ vector<double> MPC::Solve(Eigen::VectorXd current_state) {
   vars[v_range_begin]         = v;
   vars[cte_range_begin]       = cte;
   vars[epsi_range_begin]      = epsi;
-  vars[steering_range_begin]     = 0.0;
+  vars[steering_range_begin]  = 0.0;
   vars[throttle_range_begin]  = 0.0;
 
   Dvector vars_lowerbound(n_vars);
@@ -357,11 +369,15 @@ vector<double> MPC::Solve(Eigen::VectorXd current_state) {
   
   for (int i = 0; i < N; i++)
   {
+    cout << " solution.x[px_range_begin + i] = " << solution.x[px_range_begin + i] << endl;
+    cout << " solution.x[py_range_begin + i] = " << solution.x[py_range_begin + i] << endl;
+    
     predicted_xvals.push_back(solution.x[px_range_begin + i]);
     predicted_yvals.push_back(solution.x[py_range_begin + i]);
   }
   
   // Return the first actuator values. The variables can be accessed with `solution.x[i]`.
+  std::cout << " predicted_xvals size: = " << predicted_xvals.size() << std::endl;
   steering_angle_next = -1.0 * solution.x[steering_range_begin];
   throttle_next       = solution.x[throttle_range_begin];
   
@@ -370,6 +386,7 @@ vector<double> MPC::Solve(Eigen::VectorXd current_state) {
            solution.x[cte_range_begin + 1], solution.x[epsi_range_begin + 1],
            solution.x[steering_range_begin], solution.x[throttle_range_begin]};
 }
+
 
 void MPC::WaypointData2VehicleCoords(const Eigen::VectorXd& current_state,
                                      const std::vector<double>& ptsx,
@@ -394,7 +411,7 @@ void MPC::WaypointData2VehicleCoords(const Eigen::VectorXd& current_state,
   }
 }
 
-void MPC::CalculateErrors(Eigen::VectorXd current_state) {
+void MPC::CalculateErrors(const Eigen::VectorXd& current_state) {
   const double px = current_state[0];
   const double py = current_state[1];
   
@@ -403,7 +420,7 @@ void MPC::CalculateErrors(Eigen::VectorXd current_state) {
   // CTE is y (read: y is the offset from the center of the road) value calculated at car coord X value == 0.0
   // Our polynomial func f = wayPtPolynomialCoeffs[3] * pow(x, 3) + wayPtPolynomialCoeffs[2] * pow(x, 2) + wayPtPolynomialCoeffs[1] * pow(x, 1) + wayPtPolynomialCoeffs[0];
   
-  cte = polyeval(wayPtPolynomialCoeffs, 0.0);
+  cte = polyeval(wayPtPolynomialCoeffs, 0.0) - py;
   
   // orientation error
   // eψ(​t) = ψ(​t) − ψdes(​t)
@@ -426,7 +443,7 @@ void MPC::WaypointVectors(const Eigen::VectorXd& ptsx_conv, const Eigen::VectorX
   wayPtPolynomialCoeffs = polyfit(ptsx_conv, ptsy_conv, 3);
   for (int i = 0; i < next_x_vals.size(); i++)
   {
-    next_x_vals[i] = 3.0 * (double)i;
+    next_x_vals[i] = 5.0 * (double)i;
     next_y_vals[i] = polyeval(wayPtPolynomialCoeffs, next_x_vals[i]);
   }
 }
