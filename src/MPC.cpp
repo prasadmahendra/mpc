@@ -352,8 +352,8 @@ vector<double> MPC::Solve(Eigen::VectorXd current_state) {
   std::cout << "Cost " << cost << std::endl;
 
   // Solved (predicted) waypoint ...
-  predicted_xvals = vector<double>();
-  predicted_yvals = vector<double>();
+  predicted_xvals = {};
+  predicted_yvals = {};
   
   for (int i = 0; i < N; i++)
   {
@@ -371,34 +371,39 @@ vector<double> MPC::Solve(Eigen::VectorXd current_state) {
            solution.x[steering_range_begin], solution.x[throttle_range_begin]};
 }
 
-void MPC::WaypointData2VehicleCoords(const Eigen::VectorXd& current_state, const std::vector<double>& ptsx, const std::vector<double>& ptsy, Eigen::VectorXd& ptsx_conv, Eigen::VectorXd& ptsy_conv)
+void MPC::WaypointData2VehicleCoords(const Eigen::VectorXd& current_state,
+                                     const std::vector<double>& ptsx,
+                                     const std::vector<double>& ptsy,
+                                     Eigen::VectorXd& ptsx_conv,
+                                     Eigen::VectorXd& ptsy_conv)
 {
   assert(ptsx.size() == ptsy.size() && ptsx_conv.size() == ptsy_conv.size());
   
-  auto px  = current_state[0];
-  auto py  = current_state[1];
-  auto psi = current_state[2];
+  const double px  = current_state[0];
+  const double py  = current_state[1];
+  const double psi = current_state[2];
+  const int pts_max = ptsx.size();
   
-  int pts_max = ptsx.size();
-  for(int i = 0; i < pts_max; i++) {
-    auto dx = ptsx[i] - px;
-    auto dy = ptsy[i] - py;
+  for (int i = 0; i < pts_max; i++)
+  {
+    double x = ptsx[i] - px;
+    double y = ptsy[i] - py;
     
-    ptsx_conv[i] = dx * cos(-psi) - dy * sin(-psi);
-    ptsy_conv[i] = dy * cos(-psi) + dx * sin(-psi);
+    ptsx_conv[i] = x * cos(psi) + y * sin(psi);
+    ptsy_conv[i] = y * cos(psi) - x * sin(psi);
   }
 }
 
 void MPC::CalculateErrors(Eigen::VectorXd current_state) {
-  double px = current_state[0];
-  double py = current_state[1];
+  const double px = current_state[0];
+  const double py = current_state[1];
   
   // errors ...
   // cross track error or CTE:
   // CTE is y (read: y is the offset from the center of the road) value calculated at car coord X value == 0.0
   // Our polynomial func f = wayPtPolynomialCoeffs[3] * pow(x, 3) + wayPtPolynomialCoeffs[2] * pow(x, 2) + wayPtPolynomialCoeffs[1] * pow(x, 1) + wayPtPolynomialCoeffs[0];
   
-  cte = polyeval(wayPtPolynomialCoeffs, 0.0) - py;
+  cte = polyeval(wayPtPolynomialCoeffs, 0.0);
   
   // orientation error
   // eψ(​t) = ψ(​t) − ψdes(​t)
@@ -411,7 +416,7 @@ void MPC::CalculateErrors(Eigen::VectorXd current_state) {
   // f' is = 3 * wayPtPolynomialCoeffs[3] * pow(x, 2) + 2 * wayPtPolynomialCoeffs[2] * pow(x, 1) * wayPtPolynomialCoeffs[1]
   // therefore ...
   
-  epsi = -atan(wayPtPolynomialCoeffs[1]);
+  epsi = atan(wayPtPolynomialCoeffs[1]);
 }
 
 void MPC::WaypointVectors(const Eigen::VectorXd& ptsx_conv, const Eigen::VectorXd& ptsy_conv, std::vector<double>& next_x_vals, std::vector<double>& next_y_vals) {
@@ -419,8 +424,9 @@ void MPC::WaypointVectors(const Eigen::VectorXd& ptsx_conv, const Eigen::VectorX
   
   // fit a third order polynomial to waypoints (converted) vectors & get the polynomial coefficients ...
   wayPtPolynomialCoeffs = polyfit(ptsx_conv, ptsy_conv, 3);
-  for (int i = 0; i < next_x_vals.size(); i++) {
-    next_x_vals[i] = 5.0 * (double)i;
+  for (int i = 0; i < next_x_vals.size(); i++)
+  {
+    next_x_vals[i] = 3.0 * (double)i;
     next_y_vals[i] = polyeval(wayPtPolynomialCoeffs, next_x_vals[i]);
   }
 }
