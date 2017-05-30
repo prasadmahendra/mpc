@@ -116,7 +116,7 @@ class FG_eval {
     // Hence we will set our desired velocity to a speed that we expect our car to maintain throughout the track (Another option is to measure the euclidean distance
     // between the current position of the vehicle and the destination and adding that to the cost.)
     
-    double desired_velocity = 45;   // go speed racer, go!
+    double desired_velocity = 40;   // go speed racer, go!
     
     fg[0] = 0.0;
     for (int t = 0; t < N; t++)
@@ -141,7 +141,7 @@ class FG_eval {
     
     for (int t = 0; t < N - 2; t++)
     {
-      fg[0] += 10 * pow(vars[steering_range_begin + t + 1] - vars[steering_range_begin + t], 2);
+      fg[0] += pow(vars[steering_range_begin + t + 1] - vars[steering_range_begin + t], 2);
       fg[0] += pow(vars[throttle_range_begin + t + 1] - vars[throttle_range_begin + t], 2);
     }
 
@@ -235,7 +235,7 @@ vector<double> MPC::Solve(const Eigen::VectorXd& current_state) {
   // adjust current state for actuator latency (100ms)
   double actuator_latency = 0.1;
   const double px = 0.0 + v * actuator_latency;
-  const double py = 0.0;
+  const double py = 0.0; //polyeval(wayPtPolynomialCoeffs, px);
   const double ψ = 0.0 + v * (-δ) / Lf * actuator_latency;
   v = v + a * actuator_latency;
   
