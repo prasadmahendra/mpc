@@ -470,16 +470,13 @@ Eigen::VectorXd MPC::polyfit(const Eigen::VectorXd& xvals, const Eigen::VectorXd
   return result;
 }
 
-double MPC::polyeval(const Eigen::VectorXd& coeffs, const double x)
-{
-  double y = 0.0;
-  
-  for (int i=0; i < coeffs.size(); i++)
-  {
-    y += coeffs[i] * pow(x, i);
+// Evaluate a polynomial.
+double MPC::polyeval(const Eigen::VectorXd& coeffs, double x) {
+  double result = 0.0;
+  for (int i = 0; i < coeffs.size(); i++) {
+    result += coeffs[i] * pow(x, i);
   }
-  
-  return y;
+  return result;
 }
 
 double MPC::ThrottleNext() {
