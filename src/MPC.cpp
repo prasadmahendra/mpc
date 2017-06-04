@@ -70,14 +70,14 @@ const double Lf = 2.67;
 
 // The solver takes all the state variables and actuator variables in a singular vector. Thus, we should to establish
 // when one variable starts and another ends to make our lifes easier.
-int px_range_begin       = 0;
-int py_range_begin       = px_range_begin    + N;
-int psi_range_begin      = py_range_begin    + N;
-int v_range_begin        = psi_range_begin   + N;
-int cte_range_begin      = v_range_begin     + N;
-int epsi_range_begin     = cte_range_begin   + N;
-int steering_range_begin = epsi_range_begin  + N;
-int throttle_range_begin = steering_range_begin + (N - 1);
+const int px_range_begin       = 0;
+const int py_range_begin       = px_range_begin    + N;
+const int psi_range_begin      = py_range_begin    + N;
+const int v_range_begin        = psi_range_begin   + N;
+const int cte_range_begin      = v_range_begin     + N;
+const int epsi_range_begin     = cte_range_begin   + N;
+const int steering_range_begin = epsi_range_begin  + N;
+const int throttle_range_begin = steering_range_begin + (N - 1);
 
 class FG_eval {
  public:
@@ -117,23 +117,25 @@ class FG_eval {
     //    Ideally, both of these errors would be 0 - there would be no difference from the actual vehicle position and heading to the desired position and heading.
     //    So our desired cte and desired epsi values are 0.0
     
-    double desired_cte = 0.0;
-    double desired_epsi = 0.0;
+    const double desired_cte = 0.0;
+    const double desired_epsi = 0.0;
 
     // Our goal is to move the vehicle from A to B, then coming to a halt in the middle of the reference trajectory is a big problem!
     // A simple solution is to capture the velocity error in the cost function. This will penalize the vehicle for not maintaining the reference velocity.
     // Hence we will set our desired velocity to a speed that we expect our car to maintain throughout the track (Another option is to measure the euclidean distance
     // between the current position of the vehicle and the destination and adding that to the cost.)
     
-    double desired_velocity = 55;   // go speed racer, go!
+    const double desired_velocity = 55;   // go speed racer, go!
     
-    double cost_func_cte_weight = 1;
-    double cost_func_epsi_weight = 1;
-    double cost_func_v_weight = 1;
-    double cost_func_steer_weight = 1;
-    double cost_func_throttle_weight = 10;
-    double cost_func_steer_rate_weight = 500;
-    double cost_func_throttle_rate_weight = 1;
+    const double cost_func_cte_weight = 1;
+    const double cost_func_epsi_weight = 1;
+    const double cost_func_v_weight = 1;
+    const double cost_func_steer_weight = 1;
+    const double cost_func_throttle_weight = 10;        // penalize large throttle values 10x
+    const double cost_func_steer_rate_weight = 500;     // penalize rapid steering angle changes 500x
+    const double cost_func_throttle_rate_weight = 1;
+    
+    // !!! These consts above can be moved out of the operator overload func but left here for readability
     
     fg[0] = 0.0;
     for (int t = 0; t < N; t++)
@@ -227,6 +229,8 @@ MPC::MPC()
 {
   cte = 0.0;
   epsi = 0.0;
+  steering_angle_next = 0.0;
+  throttle_next = 0.0;
 }
 
 MPC::~MPC()
@@ -237,12 +241,16 @@ MPC::~MPC()
 // Return the first actuatotions.
 vector<double> MPC::Solve(const Eigen::VectorXd& current_state) {
   /*
-  double px     = current_state[0];
-  double py     = current_state[1];
-  double ψ      = current_state[2];
-  double v      = current_state[3];
-  double δ      = current_state[4];
-  double a      = current_state[5];
+  
+   Input param current_state:
+   
+    double px     = current_state[0];
+    double py     = current_state[1];
+    double ψ      = current_state[2];
+    double v      = current_state[3];
+    double δ      = current_state[4];
+    double a      = current_state[5];
+
   */
   
   double v      = current_state[3];
