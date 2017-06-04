@@ -125,14 +125,16 @@ class FG_eval {
     // Hence we will set our desired velocity to a speed that we expect our car to maintain throughout the track (Another option is to measure the euclidean distance
     // between the current position of the vehicle and the destination and adding that to the cost.)
     
-    const double desired_velocity = 55;   // go speed racer, go!
+    const double desired_velocity = 85;   // go speed racer, go!
     
     const double cost_func_cte_weight = 1;
     const double cost_func_epsi_weight = 1;
     const double cost_func_v_weight = 1;
     const double cost_func_steer_weight = 1;
-    const double cost_func_throttle_weight = 10;        // penalize large throttle values 10x
-    const double cost_func_steer_rate_weight = 500;     // penalize rapid steering angle changes 500x
+    const double cost_func_throttle_weight = 10;         // penalize large throttle values (10x)
+    const double cost_func_steer_rate_weight = 2500;     // penalize rapid steering angle changes (2000x).
+                                                         // This penalty here is proportional to our desired (v) and has a big impact on smooth
+                                                         // vehicle trajectory
     const double cost_func_throttle_rate_weight = 1;
     
     // !!! These consts above can be moved out of the operator overload func but left here for readability
