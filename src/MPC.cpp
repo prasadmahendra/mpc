@@ -241,7 +241,7 @@ MPC::~MPC()
 // Return the first actuatotions.
 vector<double> MPC::Solve(const Eigen::VectorXd& current_state) {
   /*
-   
+  
    Input param current_state:
    
     double px     = current_state[0];
@@ -250,7 +250,7 @@ vector<double> MPC::Solve(const Eigen::VectorXd& current_state) {
     double v      = current_state[3];
     double δ      = current_state[4];
     double a      = current_state[5];
-   
+
   */
   
   double v      = current_state[3];
