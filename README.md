@@ -1,6 +1,9 @@
 # Model predictive controller
 ---
 
+[![MPC](http://img.youtube.com/vi/-JLB_hd5BPU/0.jpg)](https://youtu.be/-JLB_hd5BPU "MPC")
+
+
 ### Dependencies
 
 * cmake >= 3.5
@@ -24,11 +27,9 @@
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
     * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`.
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [CppAD](https://www.coin-or.org/CppAD/)
   * Mac: `brew install cppad`
   * Linux `sudo apt-get install cppad` or equivalent.
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
 * Simulator. You can download these from the [releases tab](https://github.com/udacity/CarND-MPC-Project/releases) (or [here](https://github.com/udacity/self-driving-car-sim/releases))
 * Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
@@ -48,14 +49,6 @@
 3. Run: `cmake -G Xcode ../`
 4. Open `MPC.xcodeproj` in xcode
 5. Run it: `./mpc`
-
-### Tips
-
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
 
 ### References:
 
