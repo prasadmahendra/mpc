@@ -1,0 +1,7 @@
+xcode-build
+.idea
+.vscode
+build
+tags
+.editorconfig
+.DS_Store
