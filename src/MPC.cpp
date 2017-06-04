@@ -89,6 +89,15 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   
+  // Evaluate a polynomial.
+  AD<double> polyeval(AD<double> x) {
+    AD<double> result = 0.0;
+    for (int i = 0; i < coeffs.size(); i++) {
+      result += coeffs[i] * pow(x, i);
+    }
+    return result;
+  }
+  
   void operator()(ADvector& fg, const ADvector& vars)
   {
     // MPC Implementation ...
@@ -116,14 +125,22 @@ class FG_eval {
     // Hence we will set our desired velocity to a speed that we expect our car to maintain throughout the track (Another option is to measure the euclidean distance
     // between the current position of the vehicle and the destination and adding that to the cost.)
     
-    double desired_velocity = 40;   // go speed racer, go!
+    double desired_velocity = 55;   // go speed racer, go!
+    
+    double cost_func_cte_weight = 1;
+    double cost_func_epsi_weight = 1;
+    double cost_func_v_weight = 1;
+    double cost_func_steer_weight = 1;
+    double cost_func_throttle_weight = 10;
+    double cost_func_steer_rate_weight = 500;
+    double cost_func_throttle_rate_weight = 1;
     
     fg[0] = 0.0;
     for (int t = 0; t < N; t++)
     {
-      fg[0] += pow(vars[cte_range_begin + t]  - desired_cte,  2);
-      fg[0] += pow(vars[epsi_range_begin + t] - desired_epsi, 2);
-      fg[0] += pow(vars[v_range_begin + t] - desired_velocity, 2);
+      fg[0] += cost_func_cte_weight * pow(vars[cte_range_begin + t]  - desired_cte,  2);
+      fg[0] += cost_func_epsi_weight * pow(vars[epsi_range_begin + t] - desired_epsi, 2);
+      fg[0] += cost_func_v_weight * pow(vars[v_range_begin + t] - desired_velocity, 2);
     }
     
     // The cost function is not limited to the state, we could also include the control input! The reason we would do this is to allow us to penalize the magnitude of
@@ -132,8 +149,8 @@ class FG_eval {
 
     for (int t = 0; t < N - 1; t++)
     {
-      fg[0] += pow(vars[steering_range_begin + t], 2);
-      fg[0] += pow(vars[throttle_range_begin + t], 2);
+      fg[0] += cost_func_steer_weight * cost_func_steer_weight * pow(vars[steering_range_begin + t], 2);
+      fg[0] += cost_func_throttle_weight * pow(vars[throttle_range_begin + t], 2);
     }
     
     // We still need to capture the change-rate of the control input to add some temporal smoothness.
@@ -141,8 +158,8 @@ class FG_eval {
     
     for (int t = 0; t < N - 2; t++)
     {
-      fg[0] += pow(vars[steering_range_begin + t + 1] - vars[steering_range_begin + t], 2);
-      fg[0] += pow(vars[throttle_range_begin + t + 1] - vars[throttle_range_begin + t], 2);
+      fg[0] += cost_func_steer_rate_weight * (pow(vars[steering_range_begin + t + 1] - vars[steering_range_begin + t], 2));
+      fg[0] += cost_func_throttle_rate_weight * pow(vars[throttle_range_begin + t + 1] - vars[throttle_range_begin + t], 2);
     }
 
     // Initial constraints
@@ -177,8 +194,8 @@ class FG_eval {
       AD<double> delta0 = vars[steering_range_begin + i];
       AD<double> a0 = vars[throttle_range_begin + i];
       
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = polyeval(x0);                                                                     // use a our polynomial (3rd order) to calc f0 at x0
+      AD<double> psides0 = atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * pow(x0, 2));           // atan(derrivative of f0)
       
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -403,11 +420,11 @@ void MPC::WaypointData2VehicleCoords(const Eigen::VectorXd& current_state,
   
   for (int i = 0; i < pts_max; i++)
   {
-    double x = ptsx[i] - px;
-    double y = ptsy[i] - py;
+    double dx = ptsx[i] - px;
+    double dy = ptsy[i] - py;
     
-    ptsx_conv[i] = x * cos(psi) + y * sin(psi);
-    ptsy_conv[i] = y * cos(psi) - x * sin(psi);
+    ptsx_conv[i] = dx * cos(psi) + dy * sin(psi);
+    ptsy_conv[i] = dy * cos(psi) - dx * sin(psi);
   }
 }
 
@@ -420,7 +437,7 @@ void MPC::CalculateErrors(const Eigen::VectorXd& current_state) {
   // CTE is y (read: y is the offset from the center of the road) value calculated at car coord X value == 0.0
   // Our polynomial func f = wayPtPolynomialCoeffs[3] * pow(x, 3) + wayPtPolynomialCoeffs[2] * pow(x, 2) + wayPtPolynomialCoeffs[1] * pow(x, 1) + wayPtPolynomialCoeffs[0];
   
-  cte = polyeval(wayPtPolynomialCoeffs, 0.0) - py;
+  cte = polyeval(wayPtPolynomialCoeffs, 0.0);
   
   // orientation error
   // eψ(​t) = ψ(​t) − ψdes(​t)
@@ -433,7 +450,7 @@ void MPC::CalculateErrors(const Eigen::VectorXd& current_state) {
   // f' is = 3 * wayPtPolynomialCoeffs[3] * pow(x, 2) + 2 * wayPtPolynomialCoeffs[2] * pow(x, 1) * wayPtPolynomialCoeffs[1]
   // therefore ...
   
-  epsi = atan(wayPtPolynomialCoeffs[1]);
+  epsi = -atan(wayPtPolynomialCoeffs[1]);
 }
 
 void MPC::WaypointVectors(const Eigen::VectorXd& ptsx_conv, const Eigen::VectorXd& ptsy_conv, std::vector<double>& next_x_vals, std::vector<double>& next_y_vals) {
