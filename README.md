@@ -1,8 +1,9 @@
 # Model predictive controller
 ---
 
-[![MPC](http://img.youtube.com/vi/-JLB_hd5BPU/0.jpg)](https://youtu.be/-JLB_hd5BPU "MPC")
+[![MPC](http://img.youtube.com/vi/R8IseGFKXMg/0.jpg)](https://youtu.be/R8IseGFKXMg "MPC")
 
+[![MPC](http://img.youtube.com/vi/-JLB_hd5BPU/0.jpg)](https://youtu.be/-JLB_hd5BPU "MPC")
 
 ### Dependencies
 
